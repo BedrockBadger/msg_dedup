@@ -1,7 +1,8 @@
 import extract_msg
 import hashlib
 import os
-from datetime import dataetime
+import re
+from datetime import datetime
 from dataclasses import dataclass
 from typing import Optional, List
 
@@ -10,23 +11,31 @@ class MessageInfo:
     filepath: str
     file_hash: str
     subject: str
-    date: Optional[dataetime]
+    sender: str
+    date: Optional[datetime]
     body_hash: str
     message_id: Optional[str]
-    in_replay_to: Optional[str]
+    in_reply_to: Optional[str]
     references: Optional[List[str]]
 
 #Helper function used to clean the subject of prefixes such as RE:, FWD:, etc
-def clean_subject(subject):
+def clean_subject(subject_string: str):
     
-    subject_lower = subject.lower()
-
-    subject_prefixes = ["re: ", "fwd: "]
-
-    for prefix in subject_prefixes: 
-        subject_lower = subject_lower.replace(prefix, '')
+    if not subject_string: 
+        return ""
     
-    return subject_lower
+    prefix_pattern = r"^(?:re|fw|fwd|aw):\s*"  
+
+    cleaned_subject = subject_string
+
+    while True: 
+        new_subject = re.sub(prefix_pattern, "", cleaned_subject, flags=re.IGNORECASE)
+
+        if cleaned_subject == new_subject: 
+            break;
+        cleaned_subject = new_subject.strip()
+
+    return cleaned_subject.strip()
 
 #parsing the information in a given msg file
 def extract_msg_info(filepath):
@@ -35,6 +44,7 @@ def extract_msg_info(filepath):
     _, ext = os.path.splitext(filepath)
 
     if ext.lower() != ".msg": 
+        print("passed file was not a .msg file")
         return None
 
     #first try to successfully run this code
@@ -53,11 +63,33 @@ def extract_msg_info(filepath):
 
         msg.subject = clean_subject(msg.subject)                        #clean the subject of the email
 
-        
+        raw_reference_string = msg.header.get("References")
+        reference_list = None
 
-        return msg
+        if raw_reference_string: 
+            parts = raw_reference_string.split()
+
+            reference_list = [ref.strip() for ref in parts if ref.strip()]
+
+        MessageData = MessageInfo(
+            filepath = filepath,
+            file_hash = file_hash,
+            subject = msg.subject,
+            sender = msg.sender,
+            date = msg.datetimeFormat, 
+            body_hash = body_hash, 
+            message_id = msg.messageId,
+            in_reply_to = msg.inReplyTo,
+            references = reference_list
+        )
+
+        return MessageData
     
     #if an error occurs, we print it to the console
     except Exception as e:
         print(f"An error occured while parsing{filepath} : {e}")
         return None
+
+#test code to run only if initating in this module
+if __name__ == "__main__":
+    extract_msg_info('/home/jordan/msg_deduplicator/data/TestMessage.msg')
