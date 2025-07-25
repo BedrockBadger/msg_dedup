@@ -18,6 +18,17 @@ class MessageInfo:
     in_reply_to: Optional[str]
     references: Optional[List[str]]
 
+    def print_data(self):
+        print(f"File path: {self.filepath}")
+        print(f"File hash: {self.file_hash}")
+        print(f"Subject: {self.subject}")
+        print(f"Sender: {self.sender}")
+        print(f"Date: {self.date.strftime('%Y-%m-%d %H:%M:%S') if self.date else 'N/A'}")
+        print(f"Body_hash: {self.body_hash}")
+        print(f"Message_id: {self.message_id if self.message_id else 'N/A'}")
+        print(f"In reply to: {self.in_reply_to if self.in_reply_to else 'N/A'}")
+        print(f"References: {','.join(self.references) if self.references else 'N/A'}")
+
 #Helper function used to clean the subject of prefixes such as RE:, FWD:, etc
 def clean_subject(subject_string: str):
     
@@ -76,7 +87,7 @@ def extract_msg_info(filepath):
             file_hash = file_hash,
             subject = msg.subject,
             sender = msg.sender,
-            date = msg.datetimeFormat, 
+            date = msg.date, 
             body_hash = body_hash, 
             message_id = msg.messageId,
             in_reply_to = msg.inReplyTo,
@@ -92,4 +103,5 @@ def extract_msg_info(filepath):
 
 #test code to run only if initating in this module
 if __name__ == "__main__":
-    extract_msg_info('/home/jordan/msg_deduplicator/data/TestMessage.msg')
+    messageObj = extract_msg_info('/home/jordan/msg_deduplicator/data/TestMessage.msg')
+    messageObj.print_data()
