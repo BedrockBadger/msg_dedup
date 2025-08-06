@@ -5,7 +5,7 @@ import re
 from models import MessageInfo
 
 #Helper function used to clean the subject of prefixes such as RE:, FWD:, etc
-def clean_subject(subject_string: str):
+def clean_subject(subject_string: str) -> str:
     
     if not subject_string: 
         return ""
@@ -23,8 +23,22 @@ def clean_subject(subject_string: str):
 
     return cleaned_subject.strip()
 
+def clean_message_id(msg_id: str) -> str:
+
+    #return empty string to handle null value
+    if not msg_id: 
+        return ''
+    
+    match = re.search(r'<(.*?)>', msg_id)   #search for pattern like < *content* > in msg_id
+
+    #if a match was found, only return the match without the pointed brackets (group(1)) and remove leading or following white spaces .strip()
+    if match:
+        return match.group(1).strip()
+
+    return msg_id.strip() #if no match is found remove whitespaces
+
 #parsing the information in a given msg file
-def extract_msg_info(filepath):
+def extract_msg_info(filepath: str) -> MessageInfo:
 
     #verify that the file path leads to a .msg file
     _, ext = os.path.splitext(filepath)
@@ -49,6 +63,9 @@ def extract_msg_info(filepath):
 
         msg.subject = clean_subject(msg.subject)                        #clean the subject of the email
 
+        messageID = clean_message_id(msg.messageId)
+        inReplyTo = clean_message_id(msg.inReplyTo)
+
         raw_reference_string = msg.header.get("References")
         reference_list = None
 
@@ -64,8 +81,8 @@ def extract_msg_info(filepath):
             sender = msg.sender,
             date = msg.date, 
             body_hash = body_hash, 
-            message_id = msg.messageId,
-            in_reply_to = msg.inReplyTo,
+            message_id = messageID,
+            in_reply_to = inReplyTo,
             references = reference_list
         )
 
