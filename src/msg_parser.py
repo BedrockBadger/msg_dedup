@@ -3,6 +3,7 @@ import hashlib
 import os
 import re
 from models import MessageInfo
+from bs4 import BeautifulSoup
 
 #Helper function used to clean the subject of prefixes such as RE:, FWD:, etc
 def clean_subject(subject_string: str) -> str:
@@ -37,6 +38,17 @@ def clean_message_id(msg_id: str) -> str:
 
     return msg_id.strip() #if no match is found remove whitespaces
 
+# NOTE -> may move this into deduplicator and have the function only be called when needed rather than for every single parsed email
+def normalize_text(text: str) -> str: 
+
+    if not text: 
+        return ""
+    
+    text = re.sub(r'^>+\s?', '', text, flags=re.MULTILINE) #getting ride of characters >> or > at the start of new lines
+    normailzed = re.sub(r'\s+', '', text)                  #removing all white spaces in the body - need for string comparision
+
+    return normailzed
+
 #parsing the information in a given msg file
 def extract_msg_info(filepath: str) -> MessageInfo:
 
@@ -58,8 +70,16 @@ def extract_msg_info(filepath: str) -> MessageInfo:
             file_content = f.read()
             file_hash = hashlib.sha256(file_content).hexdigest()
 
-        body = msg.body or ""                                           #save the body of the email, or if nothing make blank
-        body_hash = hashlib.sha256(body.encode("utf-8")).hexdigest()    #convert the body into bytes to create hash
+        email_body = msg.body or ""  #save the body of the email, or if nothing make blank
+        
+        #Try to get email body content from htmlBody if failed to retrieve from body
+        if not email_body: 
+            if msg.htmlBody: 
+                soup = BeautifulSoup(msg.htmlBody, 'html.parser')
+                email_body = soup.get_text()
+
+        email_body = normalize_text(email_body)                               #use normalize helper on body text to allow for string comparision
+        body_hash = hashlib.sha256(email_body.encode("utf-8")).hexdigest()    #convert the body into bytes to create hash
 
         msg.subject = clean_subject(msg.subject)                        #clean the subject of the email
 
@@ -81,6 +101,7 @@ def extract_msg_info(filepath: str) -> MessageInfo:
             sender = msg.sender,
             date = msg.date, 
             body_hash = body_hash, 
+            body = email_body,
             message_id = messageID,
             in_reply_to = inReplyTo,
             references = reference_list

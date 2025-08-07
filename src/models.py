@@ -10,6 +10,7 @@ class MessageInfo:
     sender: str
     date: Optional[datetime]
     body_hash: str
+    body: str
     message_id: Optional[str]
     in_reply_to: Optional[str]
     references: Optional[List[str]]
