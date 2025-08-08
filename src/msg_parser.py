@@ -28,6 +28,7 @@ def clean_message_id(msg_id: str) -> str:
 
     #return empty string to handle null value
     if not msg_id: 
+        print("nothing to clea")
         return ''
     
     match = re.search(r'<(.*?)>', msg_id)   #search for pattern like < *content* > in msg_id
@@ -37,17 +38,6 @@ def clean_message_id(msg_id: str) -> str:
         return match.group(1).strip()
 
     return msg_id.strip() #if no match is found remove whitespaces
-
-# NOTE -> may move this into deduplicator and have the function only be called when needed rather than for every single parsed email
-def normalize_text(text: str) -> str: 
-
-    if not text: 
-        return ""
-    
-    text = re.sub(r'^>+\s?', '', text, flags=re.MULTILINE) #getting ride of characters >> or > at the start of new lines
-    normailzed = re.sub(r'\s+', '', text)                  #removing all white spaces in the body - need for string comparision
-
-    return normailzed
 
 #parsing the information in a given msg file
 def extract_msg_info(filepath: str) -> MessageInfo:
@@ -78,7 +68,6 @@ def extract_msg_info(filepath: str) -> MessageInfo:
                 soup = BeautifulSoup(msg.htmlBody, 'html.parser')
                 email_body = soup.get_text()
 
-        email_body = normalize_text(email_body)                               #use normalize helper on body text to allow for string comparision
         body_hash = hashlib.sha256(email_body.encode("utf-8")).hexdigest()    #convert the body into bytes to create hash
 
         msg.subject = clean_subject(msg.subject)                        #clean the subject of the email
